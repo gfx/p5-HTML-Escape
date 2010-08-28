@@ -302,7 +302,7 @@ CODE:
 MODULE = HTML::Escape	PACKAGE = HTML::Escape::RawString
 
 void
-new(SV* klass, SV* str)
+new(SV* klass, SV* str = &PL_sv_no)
 CODE:
 {
     dMY_CXT;
@@ -312,6 +312,7 @@ CODE:
     if(strNE(SvPV_nolen_const(klass), RAW_CLASS)) {
         croak("You cannot extend %s", RAW_CLASS);
     }
+    SvGETMAGIC(str);
     ST(0) = raw_clone(aTHX_ aMY_CXT_ str);
     XSRETURN(1);
 }

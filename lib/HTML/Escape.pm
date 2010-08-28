@@ -20,9 +20,9 @@ our %EXPORT_TAGS = (
 
 
 # load the guts
-my $backend;
-my $env    = $ENV{PERL_HTML_ESCAPE_PP};
+my $env = $ENV{PERL_HTML_ESCAPE_PP};
 
+my $backend;
 if(!exists $INC{'HTML/Escape/PP.pm'}) {
     eval {
         require XSLoader;
@@ -44,7 +44,7 @@ __END__
 
 =head1 NAME
 
-HTML::Escape - Type-based HTML escaping for safe HTML builders/templates
+HTML::Escape - Type-based HTML escaping to implement safe HTML builders/templates
 
 =head1 VERSION
 
@@ -53,6 +53,12 @@ This document describes HTML::Escape version 0.0001.
 =head1 SYNOPSIS
 
     use HTML::Escape qw(:all);
+
+    my $html = '';
+    html_concat $html, "<foo>";
+    # $html is '&lt;foo&gt;';
+    html_concat $html, mark_raw("<br />");
+    # $html is '&lt;foo&gt;<br />
 
 =head1 DESCRIPTION
 
