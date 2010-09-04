@@ -171,6 +171,9 @@ BOOT:
     MY_CXT_INIT;
     my_cxt_init(aTHX_ aMY_CXT_ FALSE);
 
+    newCONSTSUB(gv_stashpvs("HTML::Escape", GV_ADDMULTI),
+        "RAW_STRING_CLASS", newSVpvs(RAW_CLASS));
+
     /* overload stuff */
     PL_amagic_generation++;
     sv_setsv(

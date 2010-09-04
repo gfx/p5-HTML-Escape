@@ -5,6 +5,8 @@ use warnings FATAL =>'recursion';
 
 use Carp ();
 
+sub RAW_STRING_CLASS() { 'HTML::Escape::RawString' }
+
 sub install {
     no warnings;
     *HTML::Escape::mark_raw          = \&mark_raw;
@@ -13,6 +15,7 @@ sub install {
     *HTML::Escape::html_escape_force = \&html_escape_force;
     *HTML::Escape::html_concat       = \&html_concat;
     *HTML::Escape::html_join         = \&html_join;
+    *HTML::Escape::RAW_STRING_CLASS  = \&RAW_STRING_CLASS;
 
     @HTML::Escape::RawString::ISA    = qw(HTML::Escape::PP::RawString);
 }
@@ -27,7 +30,7 @@ my %escape = (
 
 my $metachars = sprintf '[%s]', join '', map { quotemeta } keys %escape;
 
-my $RAW_CLASS = 'HTML::Escape::RawString';
+my $RAW_CLASS = RAW_STRING_CLASS;
 
 sub mark_raw {
     my($str) = @_;

@@ -1,5 +1,4 @@
 package HTML::Escape;
-
 use 5.008_001;
 use strict;
 
@@ -13,17 +12,16 @@ our @EXPORT_OK   = qw(
     html_escape_force
     html_concat
     html_join
+    RAW_STRING_CLASS
 );
 our %EXPORT_TAGS = (
     all  => \@EXPORT_OK,
 );
 
-
-# load the guts
-my $pp = $ENV{HTML_ESCAPE_PP} || $ENV{PERL_NO_XS};
-
 my $backend;
 if(!exists $INC{'HTML/Escape/PP.pm'}) {
+    my $pp = $ENV{HTML_ESCAPE_PP};
+    defined($pp) or $pp = $ENV{PERL_NO_XS};
     if(!$pp) {
         eval {
             require XSLoader;
@@ -50,7 +48,7 @@ __END__
 
 =head1 NAME
 
-HTML::Escape - Type-based HTML escaping to implement safe HTML builders/templates
+HTML::Escape - Type-based HTML escaping for HTML generators
 
 =head1 VERSION
 
@@ -68,9 +66,11 @@ This document describes HTML::Escape version 0.0001.
 
 =head1 DESCRIPTION
 
-HTML::Escape provides blah blah blah.
+HTML::Escape provides HTML escaping mechanism which is useful for HTML
+generators, namely, HTML templates and HTML form builders.
 
-The idea of type-based escaping is originated from Text::MicroTemplate.
+The idea of type-based escaping is originated from Text::MicroTemplate,
+written by Oku, Kazuho.
 
 =head1 INTERFACE
 
@@ -88,15 +88,37 @@ The idea of type-based escaping is originated from Text::MicroTemplate.
 
 =head3 C<< html_join($separator :Any, ... :Any) :RawString >>
 
-=head2 Constants
+=head3 C<< RAW_STRING_CLASS >>
 
-=head3 HTML::Escape::BACKEND()
+Returns the raw string class for low-level manipulations.
+
+=head2 Internal functions
+
+=head3 C<HTML::Escape::BACKEND()>
 
 Represents the backend, namely C<XS> or C<PP>.
 
+=head1 INTERNALS
+
+A C<RawString> is just a scalar reference to a normal string blessed with
+C<HTML::Escape::RawString::RAW_STRING_CLASS> so that you can create it by
+the following code:
+
+    my $str = 'foo';
+    my $raw = bless \$str, RAW_STRING_CLASS; # OK
+
+and/or you can get the normal string from the raw string via scalar
+dereferencing:
+
+    my $raw = mark_raw('foo');
+    my $str = ${$raw}; # OK
+
 =head1 DEPENDENCIES
 
-Perl 5.8.1 or later, and a C compiler.
+Perl 5.8.1 or later.
+
+If you have a C compiler, the XS backend will be used.
+Otherwise the PP backend will be used.
 
 =head1 BUGS
 
