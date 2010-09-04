@@ -7,6 +7,8 @@ all_from 'lib/HTML/Escape.pm';
 use_ppport 3.19;
 cc_warnings;
 
+requires 'parent';
+
 test_requires 'Test::More' => 0.88; # done_testing()
 
 tests_recursive;
