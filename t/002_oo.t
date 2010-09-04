@@ -21,4 +21,14 @@ is html_escape($s), "&lt;foo&gt;<br />&lt;bar&gt;<br />";
 
 is $s->as_string,   "&lt;foo&gt;<br />&lt;bar&gt;<br />";
 
+$s = HTML::Escape::RawString->new("&amp;");
+is $s->as_string, "&amp;";
+is $s->clone_and_concat(" &"), "&amp; &amp;";
+is $s->as_string, "&amp;";
+
+$s = HTML::Escape::RawString->new("&amp;");
+is $s->as_string, "&amp;";
+is $s->concat(" &"), "&amp; &amp;";
+is $s->as_string, "&amp; &amp;";
+
 done_testing;

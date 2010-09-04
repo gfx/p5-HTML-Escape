@@ -6,6 +6,7 @@
 #define NEED_newSV_type
 #include "ppport.h"
 
+#include "html_escape.h"
 
 #define RAW_CLASS "HTML::Escape::RawString"
 
@@ -20,11 +21,21 @@ typedef struct {
 } my_cxt_t;
 START_MY_CXT
 
+static SV*
+new_buffer(pTHX) {
+    SV* const sv = newSV_type(SVt_PV);
+    sv_grow(sv, 128);
+    SvPOK_on(sv);
+    return sv_2mortal(sv);
+}
+
 static bool
 str_is_raw(pTHX_ pMY_CXT_ SV* const sv) {
-    if(SvROK(sv) && SvOBJECT(SvRV(sv))) {
-        return SvTYPE(SvRV(sv)) <= SVt_PVMG
-            && SvSTASH(SvRV(sv)) == MY_CXT.raw_stash;
+    if(SvROK(sv)) {
+        SV* const thing = SvRV(sv);
+        return SvOBJECT(thing)
+                && SvSTASH(thing) == MY_CXT.raw_stash
+                && SvTYPE(thing) <= SVt_PVMG;
     }
     return FALSE;
 }
@@ -56,11 +67,31 @@ unmark_raw(pTHX_ pMY_CXT_ SV* const str) {
     }
 }
 
+/* does sv_catsv_nomg(dest, src), but significantly faster */
+static void
+my_sv_cat(pTHX_ SV* const dest, SV* const src) {
+    if(!SvUTF8(dest) && SvUTF8(src)) {
+        sv_utf8_upgrade(dest);
+    }
+
+    {
+        STRLEN len;
+        const char* const pv  = SvPV_const(src, len);
+        STRLEN const dest_cur = SvCUR(dest);
+        char* const d         = SvGROW(dest, dest_cur + len + 1 /* count '\0' */);
+
+        Copy(pv, d + dest_cur, len + 1 /* copy '\0' */, char);
+        SvCUR_set(dest, dest_cur + len);
+    }
+}
+
+
 static void
 html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
     STRLEN len;
     const char*       cur = SvPV_const(src, len);
     const char* const end = cur + len;
+    STRLEN dest_cur       = SvCUR(dest);
 
     (void)SvGROW(dest, SvCUR(dest) + len);
     if(!SvUTF8(dest) && SvUTF8(src)) {
@@ -68,53 +99,21 @@ html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
     }
 
     while(cur != end) {
-        const char* parts;
-        STRLEN      parts_len;
-
-        switch(*cur) {
-        case '<':
-            parts     =        "&lt;";
-            parts_len = sizeof("&lt;") - 1;
-            break;
-        case '>':
-            parts     =        "&gt;";
-            parts_len = sizeof("&gt;") - 1;
-            break;
-        case '&':
-            parts     =        "&amp;";
-            parts_len = sizeof("&amp;") - 1;
-            break;
-        case '"':
-            parts     =        "&quot;";
-            parts_len = sizeof("&quot;") - 1;
-            break;
-        case '\'':
-            parts     =        "&apos;";
-            parts_len = sizeof("&apos;") - 1;
-            break;
-        default:
-            parts     = cur;
-            parts_len = 1;
-            len       = SvCUR(dest) + 2; /* parts_len + 1 */
-            SvGROW(dest, len);
-            *SvEND(dest) = *parts;
-            SvCUR_set(dest, SvCUR(dest) + 1);
-            goto loop_continue;
-            break;
+        /* preallocate the buffer for at least max parts_len + 1 */
+        char* const d = SvGROW(dest, dest_cur + 8) + dest_cur;
+        const entity_t* const e = char_trait[(U8)*cur];
+        if(e) {
+            Copy(e->entity, d, e->entity_len, char);
+            dest_cur += e->entity_len;
+        }
+        else {
+            *d = *cur;
+            dest_cur++;
         }
 
-        /* copy special characters */
-
-        len = SvCUR(dest) + parts_len + 1;
-        (void)SvGROW(dest, len);
-
-        Copy(parts, SvEND(dest), parts_len, char);
-
-        SvCUR_set(dest, SvCUR(dest) + parts_len);
-
-        loop_continue:
         cur++;
     }
+    SvCUR_set(dest, dest_cur);
     *SvEND(dest) = '\0';
 }
 
@@ -124,7 +123,7 @@ html_escape(pTHX_ pMY_CXT_ SV* const str) {
         return str;
     }
     else {
-        SV* const dest = newSVpvs_flags("", SVs_TEMP);
+        SV* const dest = new_buffer(aTHX);
         html_concat_with_force_escape(aTHX_ dest, str);
         return WRAP_RAW(dest);
     }
@@ -132,20 +131,11 @@ html_escape(pTHX_ pMY_CXT_ SV* const str) {
 
 static void
 html_concat(pTHX_ pMY_CXT_ SV* const lhs, SV* const rhs) {
-    if(!STR_IS_RAW(lhs)) {
-        SV* const raw = html_escape(aTHX_ aMY_CXT_ lhs);
-        sv_setsv(lhs, raw);
+    if(STR_IS_RAW(rhs)) {
+        my_sv_cat(aTHX_ lhs, GET_STR(rhs));
     }
-
-    {
-        SV* const sv = GET_STR(lhs);
-
-        if(STR_IS_RAW(rhs)) {
-            sv_catsv(sv, GET_STR(rhs));
-        }
-        else {
-            html_concat_with_force_escape(aTHX_ sv, rhs);
-        }
+    else {
+        html_concat_with_force_escape(aTHX_ lhs, rhs);
     }
 }
 
@@ -261,7 +251,7 @@ html_escape_force(SV* sv)
 CODE:
 {
     dMY_CXT;
-    SV* const dest = newSVpvs_flags("", SVs_TEMP);
+    SV* const dest = new_buffer(aTHX);
     html_concat_with_force_escape(aTHX_ dest, UNMARK_RAW(sv));
     ST(0) = WRAP_RAW(dest);
     XSRETURN(1);
@@ -273,6 +263,9 @@ CODE:
 {
     dMY_CXT;
     I32 i;
+    if(STR_IS_RAW(lhs)) {
+        lhs = GET_STR(lhs);
+    }
     for(i = 1; i < items; i++) {
         html_concat(aTHX_ aMY_CXT_ lhs, ST(i));
     }
@@ -284,11 +277,9 @@ html_join(SV* sep, ...)
 CODE:
 {
     dMY_CXT;
-    SV* const result = newSVpvs_flags("", SVs_TEMP);
+    SV* const result = new_buffer(aTHX);
     if(items > 1) {
         I32 i;
-        sv_grow(result, 64 * items);
-
         html_concat(aTHX_ aMY_CXT_ result, ST(1));
         for(i = 2; i < items; i++) {
             html_concat(aTHX_ aMY_CXT_ result, sep);
@@ -349,8 +340,10 @@ CODE:
 
         lhs = html_escape(aTHX_ aMY_CXT_ lhs);
     }
-    lhs = raw_clone(aTHX_ aMY_CXT_ lhs);
-    html_concat(aTHX_ aMY_CXT_ lhs, rhs);
+    else {
+        lhs = raw_clone(aTHX_ aMY_CXT_ lhs);
+    }
+    html_concat(aTHX_ aMY_CXT_ GET_STR(lhs), rhs);
     ST(0) = lhs;
     XSRETURN(1);
 }
@@ -365,8 +358,19 @@ CODE:
         SV* const tmp = lhs;
         lhs           = rhs;
         rhs           = tmp;
-        ST(0)         = lhs;
+
+        if(!STR_IS_RAW(lhs)) {
+            /* upgrade */
+            SV* const sv = WRAP_RAW(lhs);
+            sv_setsv(lhs, sv);
+        }
     }
-    html_concat(aTHX_ aMY_CXT_ lhs, rhs);
+    else {
+        if(!STR_IS_RAW(lhs)) {
+            croak("Not a raw string");
+        }
+    }
+    html_concat(aTHX_ aMY_CXT_ GET_STR(lhs), rhs);
+    ST(0) = lhs;
     XSRETURN(1);
 }

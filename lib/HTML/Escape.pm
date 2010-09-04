@@ -20,21 +20,27 @@ our %EXPORT_TAGS = (
 
 
 # load the guts
-my $env = $ENV{PERL_HTML_ESCAPE_PP};
+my $pp = $ENV{HTML_ESCAPE_PP} || $ENV{PERL_NO_XS};
 
 my $backend;
 if(!exists $INC{'HTML/Escape/PP.pm'}) {
-    eval {
-        require XSLoader;
-        XSLoader::load(__PACKAGE__, $VERSION);
-        $backend = 'XS';
-    };
-    die $@ if $@ && ( defined($env) && $env eq '0' ); # force XS
+    if(!$pp) {
+        eval {
+            require XSLoader;
+            XSLoader::load(__PACKAGE__, $VERSION);
+            $backend = 'XS';
+        };
+        die $@ if $@ && ( defined($pp) && $pp eq '0' ); # force XS
+    }
 
     if(!defined(&html_escape)) {
         require 'HTML/Escape/PP.pm';
         $backend = 'PP';
     }
+}
+
+if($backend eq 'PP') {
+    HTML::Escape::PP->install();
 }
 
 sub BACKEND() { $backend }

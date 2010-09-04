@@ -35,8 +35,11 @@ is $s . $s . $s,   "&lt;foo&gt;" x 3;
 
 $s = "<br />";
 html_concat $s, "<foo>";
-is $s, "&lt;br /&gt;&lt;foo&gt;";
-is html_escape($s), "&lt;br /&gt;&lt;foo&gt;";
+is $s, "<br />&lt;foo&gt;";
+is html_escape($s), html_escape("<br />&lt;foo&gt;");
+html_concat $s, " ", "<bar>";
+is $s, "<br />&lt;foo&gt; &lt;bar&gt;";
+is html_escape($s), html_escape("<br />&lt;foo&gt; &lt;bar&gt;");
 
 $s = mark_raw "<br />";
 html_concat $s, "<foo>";
@@ -44,12 +47,12 @@ is $s, "<br />&lt;foo&gt;";
 is html_escape($s), "<br />&lt;foo&gt;";
 
 my $x = "<br />";
-$s = "";
-html_concat $s, $x;
-is $s, "&lt;br /&gt;";
-is html_escape($s), "&lt;br /&gt;";
+$s = "&";
+html_concat $s, " ", $x;
+is $s, "& &lt;br /&gt;";
+is html_escape($s), html_escape("& &lt;br /&gt;");
 is $x, "<br />";
-is html_escape($s), "&lt;br /&gt;";
+is html_escape($x), "&lt;br /&gt;";
 
 $s = "<br />";
 $s .= html_escape("<foo>");
@@ -66,9 +69,11 @@ is html_join('foo'), '', 'the first argument is separator';
 is html_join('',             "<foo>"), "&lt;foo&gt;";
 is html_join('', html_escape "<foo>"), "&lt;foo&gt;";
 is html_join('', mark_raw    "<foo>"),    "<foo>";
+is html_join('&', 'foo', 'bar'),           'foo&amp;bar';
+is html_join(mark_raw('&'), 'foo', 'bar'), 'foo&bar';
 
-is html_join(q{|}, mark_raw("<p>"), "<foo>", " ", "<bar>", mark_raw("</p>")),
-   qq{<p>|&lt;foo&gt;| |&lt;bar&gt;|</p>};
+is html_join(q{|}, mark_raw("<p>"), "<foo>", "-", "<bar>", mark_raw("</p>")),
+   qq{<p>|&lt;foo&gt;|-|&lt;bar&gt;|</p>};
 
 $s = mark_raw '<br />';
 is html_escape($s), '<br />';
