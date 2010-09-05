@@ -1,10 +1,5 @@
-#define PERL_NO_GET_CONTEXT
-#include <EXTERN.h>
-#include <perl.h>
-#include <XSUB.h>
-
 #define NEED_newSV_type
-#include "ppport.h"
+#include "perlxs.h"
 
 #include "html_escape.h"
 
