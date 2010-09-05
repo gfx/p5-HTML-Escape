@@ -1,8 +1,6 @@
 #define NEED_newSV_type
 #include "perlxs.h"
 
-#include "html_escape.h"
-
 #define RAW_CLASS "HTML::Escape::RawString"
 
 #define GET_STR(sv)    SvRV(sv)
@@ -97,13 +95,26 @@ html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
         sv_utf8_upgrade(dest);
     }
 
+#define CopyS(from, to) Copy(from "", to, sizeof(from)-1, char); dest_cur += sizeof(from)-1
+
     while(cur != end) {
         /* preallocate the buffer for at least max parts_len + 1 */
         char* const d = SvGROW(dest, dest_cur + 8) + dest_cur;
-        const entity_t* const e = char_trait[(U8)*cur];
-        if(e) {
-            Copy(e->entity, d, e->entity_len, char);
-            dest_cur += e->entity_len;
+        const char c            = *cur;
+        if(UNLIKELY(c == '&')) {
+            CopyS("&amp;", d);
+        }
+        else if(UNLIKELY(c == '<')) {
+            CopyS("&lt;", d);
+        }
+        else if(UNLIKELY(c == '>')) {
+            CopyS("&gt;", d);
+        }
+        else if(UNLIKELY(c == '"')) {
+            CopyS("&quot;", d);
+        }
+        else if(UNLIKELY(c == '\'')) {
+            CopyS("&apos;", d);
         }
         else {
             *d = *cur;
@@ -112,6 +123,9 @@ html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
 
         cur++;
     }
+
+#undef CopyS
+
     SvCUR_set(dest, dest_cur);
     *SvEND(dest) = '\0';
 }
