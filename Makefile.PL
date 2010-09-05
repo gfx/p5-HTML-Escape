@@ -1,11 +1,11 @@
 use strict;
 use warnings;
 use inc::Module::Install;
+use Module::Install::XSUtil;
+use Module::Install::AuthorTests;
+use Module::Install::Repository;
 
 all_from 'lib/HTML/Escape.pm';
-
-use_ppport 3.19;
-cc_warnings;
 
 requires 'parent';
 
@@ -14,12 +14,15 @@ test_requires 'Test::More' => 0.88; # done_testing()
 tests_recursive;
 author_tests 'xt';
 
-auto_set_repository() if -d '.git';
-
-test_with_env(test_pp => ( PERL_NO_XS => 1 ) );
-postamble <<'TEST';
+if(want_xs) {
+    cc_src_paths 'xs';
+    use_ppport 3.19;
+    cc_warnings;
+    test_with_env(test_pp => ( PERL_NO_XS => 1 ) );
+    postamble <<'TEST';
 test :: test_pp
 TEST
+}
 
 sub test_with_env {
     my($name, %env) = @_;
@@ -58,6 +61,7 @@ sub test_with_env {
     return;
 }
 
+auto_set_repository() if -d '.git';
 
 clean_files qw(
     HTML-Escape-* *.stackdump
