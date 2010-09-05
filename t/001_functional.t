@@ -82,4 +82,17 @@ is html_escape( mark_raw($s) ),   '<br />';
 is html_escape( unmark_raw($s) ), '&lt;br /&gt;';
 is $s, '<br />';
 
+{
+    my $s = '';
+    open my $in, '<', $0 or die $!;
+    my @lines = <$in>;
+    close $in;
+
+    for my $line(@lines) {
+        html_concat $s, $line;
+    }
+
+    is $s, html_join('', @lines);
+}
+
 done_testing;

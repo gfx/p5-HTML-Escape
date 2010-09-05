@@ -85,44 +85,43 @@ html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
     const char*       cur = SvPV_const(src, len);
     const char* const end = cur + len;
     STRLEN dest_cur       = SvCUR(dest);
+    char* d;
 
-    (void)SvGROW(dest, SvCUR(dest) + len);
+    (void)SvGROW(dest, SvCUR(dest) + ( len * ( sizeof("&quot;") - 1) ) + 1);
     if(!SvUTF8(dest) && SvUTF8(src)) {
         sv_utf8_upgrade(dest);
     }
 
-#define CopyS(from, to) Copy(from "", to, sizeof(from)-1, char); dest_cur += sizeof(from)-1
+    d = SvPVX(dest) + dest_cur;
+
+#define CopyToken(token, to) Copy(token "", to, sizeof(token)-1, char); to += sizeof(token)-1
 
     while(cur != end) {
-        /* preallocate the buffer for at least max parts_len + 1 */
-        char* const d = SvGROW(dest, dest_cur + 8) + dest_cur;
-        const char c            = *cur;
-        if(UNLIKELY(c == '&')) {
-            CopyS("&amp;", d);
+        const char c = *(cur++);
+        if(c == '&') {
+            CopyToken("&amp;", d);
         }
-        else if(UNLIKELY(c == '<')) {
-            CopyS("&lt;", d);
+        else if(c == '<') {
+            CopyToken("&lt;", d);
         }
-        else if(UNLIKELY(c == '>')) {
-            CopyS("&gt;", d);
+        else if(c == '>') {
+            CopyToken("&gt;", d);
         }
-        else if(UNLIKELY(c == '"')) {
-            CopyS("&quot;", d);
+        else if(c == '"') {
+            CopyToken("&quot;", d);
         }
-        else if(UNLIKELY(c == '\'')) {
-            CopyS("&apos;", d);
+        else if(c == '\'') {
+            CopyToken("&apos;", d);
         }
         else {
-            *d = *cur;
-            dest_cur++;
+            *d = c;
+            d++;
         }
-
-        cur++;
     }
 
-#undef CopyS
+#undef CopyToken
 
-    SvCUR_set(dest, dest_cur);
+    SvCUR_set(dest, d - SvPVX(dest));
     *SvEND(dest) = '\0';
 }
 
