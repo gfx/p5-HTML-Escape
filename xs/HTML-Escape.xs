@@ -71,9 +71,8 @@ my_sv_cat(pTHX_ SV* const dest, SV* const src) {
         STRLEN len;
         const char* const pv  = SvPV_const(src, len);
         STRLEN const dest_cur = SvCUR(dest);
-        char* const d         = SvLEN(dest) < (dest_cur + len)
-            ? sv_grow(dest, (dest_cur + len) * 2)
-            : SvPVX_mutable(dest);
+        char* const d         = SvGROW(dest, dest_cur + len + 1 /* count '\0' */);
+
         Copy(pv, d + dest_cur, len + 1 /* copy '\0' */, char);
         SvCUR_set(dest, dest_cur + len);
     }
@@ -87,10 +86,7 @@ html_concat_with_force_escape(pTHX_ SV* const dest, SV* const src) {
     const char* const end = cur + len;
     STRLEN dest_cur       = SvCUR(dest);
 
-    if(SvLEN(dest) < (dest_cur + len)) {
-        (void)sv_grow(dest, (dest_cur + len) * 2);
-    }
-
+    (void)SvGROW(dest, SvCUR(dest) + len);
     if(!SvUTF8(dest) && SvUTF8(src)) {
         sv_utf8_upgrade(dest);
     }
