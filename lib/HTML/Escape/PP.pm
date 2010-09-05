@@ -12,7 +12,6 @@ sub install {
     *HTML::Escape::mark_raw          = \&mark_raw;
     *HTML::Escape::unmark_raw        = \&unmark_raw;
     *HTML::Escape::html_escape       = \&html_escape;
-    *HTML::Escape::html_escape_force = \&html_escape_force;
     *HTML::Escape::html_concat       = \&html_concat;
     *HTML::Escape::html_join         = \&html_join;
     *HTML::Escape::RAW_STRING_CLASS  = \&RAW_STRING_CLASS;
@@ -57,11 +56,6 @@ sub html_escape {
 
     $s =~ s/($metachars)/$escape{$1}/xmsgeo;
     return bless \$s, $RAW_CLASS;
-}
-
-sub html_escape_force {
-    my($s) = unmark_raw(@_);
-    return html_escape($s);
 }
 
 sub html_concat {

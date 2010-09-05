@@ -9,7 +9,6 @@ our @EXPORT_OK   = qw(
     mark_raw
     unmark_raw
     html_escape
-    html_escape_force
     html_concat
     html_join
     RAW_STRING_CLASS
@@ -81,8 +80,6 @@ written by Oku, Kazuho.
 =head3 B<< unmark_raw($str :Any) :Str >>
 
 =head3 B<< html_escape($str :Any) :RawString >>
-
-=head3 B<< html_escape_force($str :Any) :RawString >>
 
 =head3 C<< html_concat($str0 :Any, ... :Any) :RawString >>
 

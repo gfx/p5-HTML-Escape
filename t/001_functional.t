@@ -82,7 +82,4 @@ is html_escape( mark_raw($s) ),   '<br />';
 is html_escape( unmark_raw($s) ), '&lt;br /&gt;';
 is $s, '<br />';
 
-is html_escape_force('<foo>'),          '&lt;foo&gt;';
-is html_escape_force(mark_raw '<foo>'), '&lt;foo&gt;';
-
 done_testing;

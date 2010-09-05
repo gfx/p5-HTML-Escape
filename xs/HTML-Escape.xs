@@ -245,17 +245,6 @@ CODE:
 }
 
 void
-html_escape_force(SV* sv)
-CODE:
-{
-    dMY_CXT;
-    SV* const dest = new_buffer(aTHX);
-    html_concat_with_force_escape(aTHX_ dest, UNMARK_RAW(sv));
-    ST(0) = WRAP_RAW(dest);
-    XSRETURN(1);
-}
-
-void
 html_concat(SV* lhs, ...)
 CODE:
 {
